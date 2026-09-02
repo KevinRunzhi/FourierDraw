@@ -6,8 +6,9 @@ struct SineStrip: View {
     let t: Double
     let selectedFrequency: Int?
     let isStaticPhase: Bool
+    let isExpanded: Bool
 
-    @ScaledMetric(relativeTo: .caption) private var diagramHeight = 64.0
+    @ScaledMetric(relativeTo: .caption) private var diagramHeight: CGFloat = 64
 
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
     private let vermilion = Color(red: 178 / 255, green: 53 / 255, blue: 42 / 255)
@@ -17,13 +18,19 @@ struct SineStrip: View {
         m: Int,
         t: Double,
         selectedFrequency: Int? = nil,
-        isStaticPhase: Bool = false
+        isStaticPhase: Bool = false,
+        isExpanded: Bool = false
     ) {
         self.cycles = cycles
         self.m = m
         self.t = t
         self.selectedFrequency = selectedFrequency
         self.isStaticPhase = isStaticPhase
+        self.isExpanded = isExpanded
+        _diagramHeight = ScaledMetric(
+            wrappedValue: 64,
+            relativeTo: .caption
+        )
     }
 
     var body: some View {
@@ -31,30 +38,37 @@ struct SineStrip: View {
         let effectiveT = isStaticPhase ? 0 : t
         let angle = 2 * Double.pi * Double(cycle.freq) * effectiveT + cycle.phase
         let turns = Double(cycle.freq) * effectiveT + cycle.phase / (2 * Double.pi)
+        let orbitWidth: CGFloat = isExpanded ? 60 : 44
 
         VStack(alignment: .leading, spacing: 4) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 16) {
-                    OrbitDiagram(angle: angle)
-                        .frame(width: 44, height: diagramHeight)
-                    SineWaveDiagram(turns: turns)
+                    OrbitDiagram(
+                        angle: angle,
+                        radius: isExpanded ? 28 : 20
+                    )
+                        .frame(width: orbitWidth, height: diagramHeight)
+                    SineWaveDiagram(turns: turns, isExpanded: isExpanded)
                         .frame(minWidth: 240, maxWidth: .infinity)
                         .frame(height: diagramHeight)
                 }
 
                 ZStack(alignment: .topLeading) {
-                    SineWaveDiagram(turns: turns)
+                    SineWaveDiagram(turns: turns, isExpanded: isExpanded)
                         .frame(minWidth: 240, maxWidth: .infinity)
                         .frame(height: diagramHeight)
-                    OrbitDiagram(angle: angle)
-                        .frame(width: 44, height: diagramHeight)
+                    OrbitDiagram(
+                        angle: angle,
+                        radius: isExpanded ? 28 : 20
+                    )
+                        .frame(width: orbitWidth, height: diagramHeight)
                 }
                 .frame(minWidth: 240)
             }
             .frame(height: diagramHeight)
 
             Text(caption(for: cycle))
-                .font(.caption)
+                .font(isExpanded ? .system(size: 11) : .caption)
                 .foregroundStyle(ink.opacity(0.65))
         }
         .accessibilityElement(children: .ignore)
@@ -119,13 +133,13 @@ struct SineStrip: View {
 
 private struct OrbitDiagram: View {
     let angle: Double
+    let radius: CGFloat
 
     private let graphite = Color(red: 125 / 255, green: 122 / 255, blue: 115 / 255)
     private let vermilion = Color(red: 178 / 255, green: 53 / 255, blue: 42 / 255)
 
     var body: some View {
         Canvas { context, size in
-            let radius = 20.0
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
             let point = CGPoint(
                 x: center.x + radius * cos(angle),
@@ -171,6 +185,7 @@ private struct OrbitDiagram: View {
 
 private struct SineWaveDiagram: View {
     let turns: Double
+    let isExpanded: Bool
 
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
     private let vermilion = Color(red: 178 / 255, green: 53 / 255, blue: 42 / 255)
@@ -178,7 +193,9 @@ private struct SineWaveDiagram: View {
     var body: some View {
         Canvas { context, size in
             let baseline = size.height / 2
-            let amplitude = min(18.0, size.height * 0.28)
+            let amplitude = isExpanded
+                ? min(26.0, size.height * 0.42)
+                : min(18.0, size.height * 0.28)
             let sampleCount = max(240, Int(size.width.rounded(.up)))
             let progress = normalizedProgress(turns / 2)
 

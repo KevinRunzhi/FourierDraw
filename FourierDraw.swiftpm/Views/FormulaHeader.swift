@@ -13,6 +13,7 @@ struct FormulaHeader: View {
     let deltaCycles: [Epicycle]
     let canvasScale: CGFloat
     let deltaShownAt: Date?
+    let usesExpandedMetrics: Bool
 
     @ScaledMetric(relativeTo: .title2) private var mainSize: CGFloat = 21
     @ScaledMetric(relativeTo: .footnote) private var scriptSize: CGFloat = 13
@@ -40,6 +41,7 @@ struct FormulaHeader: View {
         self.deltaCycles = deltaCycles
         self.canvasScale = canvasScale
         self.deltaShownAt = deltaShownAt
+        self.usesExpandedMetrics = mainSize >= 34
         _mainSize = ScaledMetric(wrappedValue: mainSize, relativeTo: .title2)
         _scriptSize = ScaledMetric(wrappedValue: scriptSize, relativeTo: .footnote)
         _orderSize = ScaledMetric(wrappedValue: orderSize, relativeTo: .footnote)
@@ -70,13 +72,17 @@ struct FormulaHeader: View {
                 } else {
                     FormulaExplanation(
                         m: m,
-                        style: explanationStyle
+                        style: explanationStyle,
+                        usesExpandedMetrics: usesExpandedMetrics
                     )
                 }
             }
-            .padding(.top, 24)
+            .padding(.top, usesExpandedMetrics ? 18 : 24)
 
-            SymmetryExplanation(style: explanationStyle)
+            SymmetryExplanation(
+                style: explanationStyle,
+                usesExpandedMetrics: usesExpandedMetrics
+            )
         }
         .frame(maxWidth: .infinity, alignment: alignment)
         .animation(
@@ -245,8 +251,8 @@ extension FormulaHeader {
         let previousDeviation: Double?
         let deltaShownAt: Date?
 
-        @ScaledMetric(relativeTo: .caption) private var labelSize: CGFloat = 12
-        @ScaledMetric(relativeTo: .title) private var valueSize: CGFloat = 26
+        @ScaledMetric(relativeTo: .caption) private var labelSize: CGFloat = 13
+        @ScaledMetric(relativeTo: .title) private var valueSize: CGFloat = 34
         @ScaledMetric(relativeTo: .title3) private var arrowSize: CGFloat = 20
         @ScaledMetric(relativeTo: .caption) private var hintSize: CGFloat = 11
 
@@ -380,8 +386,15 @@ private struct SymmetryExplanation: View {
     private let style: FormulaHeader.ExplanationStyle
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
 
-    init(style: FormulaHeader.ExplanationStyle) {
+    init(
+        style: FormulaHeader.ExplanationStyle,
+        usesExpandedMetrics: Bool
+    ) {
         self.style = style
+        _fontSize = ScaledMetric(
+            wrappedValue: usesExpandedMetrics ? 12 : 11,
+            relativeTo: .caption
+        )
     }
 
     var body: some View {
@@ -403,12 +416,22 @@ private struct FormulaExplanation: View {
 
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
 
-    init(m: Int, style: FormulaHeader.ExplanationStyle) {
+    init(
+        m: Int,
+        style: FormulaHeader.ExplanationStyle,
+        usesExpandedMetrics: Bool
+    ) {
         self.m = m
 
-        let symbolSize: CGFloat = style == .compact ? 11 : 15
-        let meaningSize: CGFloat = style == .compact ? 11 : 13
-        let rowHeight: CGFloat = style == .compact ? 22 : 28
+        let symbolSize: CGFloat = usesExpandedMetrics
+            ? 16
+            : (style == .compact ? 11 : 15)
+        let meaningSize: CGFloat = usesExpandedMetrics
+            ? 14
+            : (style == .compact ? 11 : 13)
+        let rowHeight: CGFloat = usesExpandedMetrics
+            ? 30
+            : (style == .compact ? 22 : 28)
         _symbolSize = ScaledMetric(wrappedValue: symbolSize, relativeTo: .body)
         _meaningSize = ScaledMetric(wrappedValue: meaningSize, relativeTo: .footnote)
         _rowHeight = ScaledMetric(wrappedValue: rowHeight, relativeTo: .body)

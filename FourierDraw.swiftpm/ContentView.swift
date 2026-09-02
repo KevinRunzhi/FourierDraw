@@ -12,7 +12,7 @@ func deltaHighlightOpacity(at date: Date, shownAt: Date?) -> Double {
 struct ContentView: View {
     private static let initialPreset = preparePreset(
         .star,
-        m: 256,
+        m: 3,
         resolution: PerfTier.high.trailResolution
     )
 
@@ -23,7 +23,7 @@ struct ContentView: View {
     @State private var ghost: [CGPoint]
     @State private var trail: [CGPoint]
     @State private var ghostExtent: CGFloat
-    @State private var m = 256
+    @State private var m = 3
     @State private var isDragging = false
     @State private var isFirstRoundAfterDrawing = false
     @State private var drawingPoints: [CGPoint] = []
@@ -59,7 +59,7 @@ struct ContentView: View {
         _ghostExtent = State(initialValue: Self.initialPreset.extent)
         _deviation = State(initialValue: Self.tailDeviation(
             in: Self.initialPreset.cycles,
-            m: 256
+            m: 3
         ))
         _previousDeviation = State(initialValue: nil)
     }
@@ -176,7 +176,7 @@ struct ContentView: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 18)
 
-                synchronizedSineStrip
+                synchronizedSineStrip()
                     .padding(.horizontal, 24)
                     .padding(.top, 14)
 
@@ -213,7 +213,7 @@ struct ContentView: View {
                     hairline
                         .padding(.vertical, 20)
 
-                    synchronizedSineStrip
+                    synchronizedSineStrip()
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 24)
@@ -232,27 +232,27 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("圆迹")
-                        .font(.system(size: 20))
+                        .font(.system(size: 26))
                         .foregroundStyle(ink)
 
                     Text("OrbitInk")
-                        .font(.system(size: 13, design: .serif))
+                        .font(.system(size: 15, design: .serif))
                         .foregroundStyle(ink.opacity(0.45))
                 }
 
                 Text("让傅里叶重新画出你的笔迹")
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                     .foregroundStyle(ink.opacity(0.55))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             hairline
-                .padding(.top, 16)
+                .padding(.top, 12)
 
             HStack(spacing: 36) {
-                VStack(spacing: 12) {
+                VStack(spacing: 8) {
                     canvas
-                    DrawingPrompt()
+                    DrawingPrompt(primarySize: 17, secondarySize: 12)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -260,23 +260,21 @@ struct ContentView: View {
                     FormulaHeader(
                         m: m,
                         selectedCycle: selectedCycle,
-                        mainSize: 30,
+                        mainSize: 34,
                         scriptSize: 18,
-                        orderSize: 21,
+                        orderSize: 23,
                         alignment: .leading,
                         deltaCycles: deltaCycles,
                         canvasScale: canvasScale,
                         deltaShownAt: deltaShownAt
                     )
 
-                    hairline
-                        .padding(.vertical, 20)
+                    Spacer(minLength: 16)
 
-                    synchronizedSineStrip
+                    synchronizedSineStrip(isExpanded: true)
                         .frame(minWidth: 240, maxWidth: .infinity)
 
-                    hairline
-                        .padding(.vertical, 20)
+                    Spacer(minLength: 16)
 
                     FormulaHeader.DeviationReadout(
                         deviation: deviation * Double(canvasScale),
@@ -285,13 +283,11 @@ struct ContentView: View {
                         },
                         deltaShownAt: deltaShownAt
                     )
-
-                    Spacer(minLength: 0)
                 }
-                .frame(width: 416)
+                .frame(width: max(416, size.width * 0.38))
                 .frame(maxHeight: .infinity, alignment: .top)
             }
-            .padding(.top, 24)
+            .padding(.top, 16)
             .frame(maxHeight: .infinity)
         }
         .padding(24)
@@ -391,7 +387,7 @@ struct ContentView: View {
         }
     }
 
-    private var synchronizedSineStrip: some View {
+    private func synchronizedSineStrip(isExpanded: Bool = false) -> some View {
         SynchronizedSineStrip(
             cycles: cycles,
             m: m,
@@ -399,7 +395,8 @@ struct ContentView: View {
             isFirstRound: isFirstRoundAfterDrawing,
             hasBloom: isFirstRoundAfterDrawing,
             isDragging: isDragging,
-            selectedFrequency: selectedFrequency
+            selectedFrequency: selectedFrequency,
+            isExpanded: isExpanded
         )
     }
 
@@ -810,6 +807,7 @@ private struct SynchronizedSineStrip: View {
     let hasBloom: Bool
     let isDragging: Bool
     let selectedFrequency: Int?
+    let isExpanded: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -821,7 +819,8 @@ private struct SynchronizedSineStrip: View {
                 m: m,
                 t: 0,
                 selectedFrequency: selectedFrequency,
-                isStaticPhase: true
+                isStaticPhase: true,
+                isExpanded: isExpanded
             )
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
@@ -835,7 +834,8 @@ private struct SynchronizedSineStrip: View {
                     cycles: cycles,
                     m: m,
                     t: phase.drawProgress,
-                    selectedFrequency: selectedFrequency
+                    selectedFrequency: selectedFrequency,
+                    isExpanded: isExpanded
                 )
             }
         }
@@ -843,16 +843,24 @@ private struct SynchronizedSineStrip: View {
 }
 
 private struct DrawingPrompt: View {
+    let primarySize: CGFloat
+    let secondarySize: CGFloat
+
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
+
+    init(primarySize: CGFloat = 15, secondarySize: CGFloat = 11) {
+        self.primarySize = primarySize
+        self.secondarySize = secondarySize
+    }
 
     var body: some View {
         VStack(spacing: 3) {
             Text("用手指在这里画一个封闭图形")
-                .font(.system(size: 15))
+                .font(.system(size: primarySize))
                 .foregroundStyle(ink.opacity(0.8))
 
             Text("虚线是你画的原稿，实线是圆链重新画出来的")
-                .font(.system(size: 11))
+                .font(.system(size: secondarySize))
                 .foregroundStyle(ink.opacity(0.45))
         }
         .multilineTextAlignment(.center)
