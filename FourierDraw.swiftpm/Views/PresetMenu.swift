@@ -4,11 +4,22 @@ import Foundation
 struct PresetMenu: View {
     @Binding var selectedPreset: Preset?
     let onSelect: (Preset) -> Void
+    let onInteraction: () -> Void
 
     @State private var isExpanded = false
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
+
+    init(
+        selectedPreset: Binding<Preset?>,
+        onSelect: @escaping (Preset) -> Void,
+        onInteraction: @escaping () -> Void = {}
+    ) {
+        _selectedPreset = selectedPreset
+        self.onSelect = onSelect
+        self.onInteraction = onInteraction
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -16,6 +27,7 @@ struct PresetMenu: View {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        onInteraction()
                         isExpanded = false
                     }
                     .accessibilityHidden(true)
@@ -34,6 +46,7 @@ struct PresetMenu: View {
 
     private var menuButton: some View {
         Button {
+            onInteraction()
             isExpanded.toggle()
         } label: {
             Image(systemName: "star")
@@ -58,6 +71,7 @@ struct PresetMenu: View {
         VStack(spacing: 0) {
             ForEach(Preset.allCases) { preset in
                 Button {
+                    onInteraction()
                     selectedPreset = preset
                     isExpanded = false
                     onSelect(preset)

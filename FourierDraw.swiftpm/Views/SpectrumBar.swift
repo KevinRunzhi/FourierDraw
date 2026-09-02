@@ -5,6 +5,7 @@ struct SpectrumBar: View {
     let cycles: [Epicycle]
     let m: Int
     let selectedFrequency: Int?
+    let showsExtendedLabels: Bool
     let onSelect: (Int) -> Void
 
     @ScaledMetric(relativeTo: .caption2) private var labelHeight = 14.0
@@ -16,11 +17,13 @@ struct SpectrumBar: View {
         cycles: [Epicycle],
         m: Int,
         selectedFrequency: Int? = nil,
+        showsExtendedLabels: Bool = false,
         onSelect: @escaping (Int) -> Void = { _ in }
     ) {
         self.cycles = cycles
         self.m = m
         self.selectedFrequency = selectedFrequency
+        self.showsExtendedLabels = showsExtendedLabels
         self.onSelect = onSelect
     }
 
@@ -58,11 +61,7 @@ struct SpectrumBar: View {
                 }
                 .frame(height: max(0, geometry.size.height - labelHeight - 2))
 
-                Text("0")
-                    .font(.caption2)
-                    .foregroundStyle(ink.opacity(0.55))
-                    .frame(height: labelHeight)
-                    .accessibilityHidden(true)
+                scaleLabels(width: geometry.size.width)
             }
             .contentShape(Rectangle())
             .gesture(
@@ -98,10 +97,49 @@ struct SpectrumBar: View {
         return amplitudes
     }
 
+    @ViewBuilder
+    private func scaleLabels(width: CGFloat) -> some View {
+        if showsExtendedLabels {
+            ZStack {
+                ForEach([-32, -16, 0, 16, 32], id: \.self) { frequency in
+                    Text(scaleLabel(for: frequency))
+                        .font(.caption2)
+                        .fontDesign(.serif)
+                        .foregroundStyle(ink.opacity(0.55))
+                        .position(
+                            x: (CGFloat(frequency + 32) + 0.5) * width / 65,
+                            y: labelHeight / 2
+                        )
+                }
+            }
+            .frame(width: width, height: labelHeight)
+            .accessibilityHidden(true)
+        } else {
+            Text("0")
+                .font(.caption2)
+                .foregroundStyle(ink.opacity(0.55))
+                .frame(height: labelHeight)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func scaleLabel(for frequency: Int) -> String {
+        switch frequency {
+        case -32, -16:
+            return "−\(abs(frequency))"
+        case 0:
+            return "k = 0"
+        default:
+            return "+\(frequency)"
+        }
+    }
+
     private var accessibilityValue: String {
         let range = "显示频率负 32 到正 32，启用到绝对值 \(min(max(m, 0), 32))"
         guard let selectedFrequency else { return range }
-        return "\(range)，当前观察 k 等于 \(selectedFrequency)"
+        let amplitude = cycles.first { $0.freq == selectedFrequency }?.amp ?? 0
+        let participation = abs(selectedFrequency) <= m ? "已参与" : "尚未参与"
+        return "\(range)，当前观察 k 等于 \(selectedFrequency)，振幅 \(amplitude.formatted(.number.precision(.fractionLength(1))))，\(participation)"
     }
 
     private func adjustSelection(_ direction: AccessibilityAdjustmentDirection) {
