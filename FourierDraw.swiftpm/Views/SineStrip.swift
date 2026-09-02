@@ -4,45 +4,69 @@ struct SineStrip: View {
     let cycles: [Epicycle]
     let m: Int
     let t: Double
+    let selectedFrequency: Int?
+    let isStaticPhase: Bool
+
+    @ScaledMetric(relativeTo: .caption) private var diagramHeight = 64.0
 
     private let ink = Color(red: 26 / 255, green: 26 / 255, blue: 24 / 255)
     private let vermilion = Color(red: 178 / 255, green: 53 / 255, blue: 42 / 255)
 
+    init(
+        cycles: [Epicycle],
+        m: Int,
+        t: Double,
+        selectedFrequency: Int? = nil,
+        isStaticPhase: Bool = false
+    ) {
+        self.cycles = cycles
+        self.m = m
+        self.t = t
+        self.selectedFrequency = selectedFrequency
+        self.isStaticPhase = isStaticPhase
+    }
+
     var body: some View {
         let cycle = selectedCycle
-        let angle = 2 * Double.pi * Double(cycle.freq) * t + cycle.phase
-        let turns = Double(cycle.freq) * t + cycle.phase / (2 * Double.pi)
+        let effectiveT = isStaticPhase ? 0 : t
+        let angle = 2 * Double.pi * Double(cycle.freq) * effectiveT + cycle.phase
+        let turns = Double(cycle.freq) * effectiveT + cycle.phase / (2 * Double.pi)
 
         VStack(alignment: .leading, spacing: 4) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 16) {
                     OrbitDiagram(angle: angle)
-                        .frame(width: 44, height: 64)
+                        .frame(width: 44, height: diagramHeight)
                     SineWaveDiagram(turns: turns)
                         .frame(minWidth: 240, maxWidth: .infinity)
-                        .frame(height: 64)
+                        .frame(height: diagramHeight)
                 }
 
                 ZStack(alignment: .topLeading) {
                     SineWaveDiagram(turns: turns)
                         .frame(minWidth: 240, maxWidth: .infinity)
-                        .frame(height: 64)
+                        .frame(height: diagramHeight)
                     OrbitDiagram(angle: angle)
-                        .frame(width: 44, height: 64)
+                        .frame(width: 44, height: diagramHeight)
                 }
                 .frame(minWidth: 240)
             }
-            .frame(height: 64)
+            .frame(height: diagramHeight)
 
-            Text(caption(for: cycle.freq))
-                .font(.system(size: 11))
+            Text(caption(for: cycle))
+                .font(.caption)
                 .foregroundStyle(ink.opacity(0.65))
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(caption(for: cycle.freq))
+        .accessibilityLabel(caption(for: cycle))
     }
 
     private var selectedCycle: Epicycle {
+        if let selectedFrequency,
+           let cycle = cycles.first(where: { $0.freq == selectedFrequency }) {
+            return cycle
+        }
+
         let highestFrequency = min(max(m, 0), 32)
         var maximumAmplitude = 0.0
         var strongestByMagnitude = [Epicycle?](
@@ -73,10 +97,23 @@ struct SineStrip: View {
             ?? Epicycle(freq: 0, amp: 0, phase: 0)
     }
 
-    private func caption(for frequency: Int) -> String {
-        guard frequency != 0 else { return "k = 0 · 每周保持不转" }
-        let direction = frequency > 0 ? "逆时针" : "顺时针"
-        return "k = \(frequency) · 每周\(direction)转 \(abs(frequency)) 圈"
+    private func caption(for cycle: Epicycle) -> String {
+        let motion: String
+        if cycle.freq == 0 {
+            motion = "k = 0 · 每周保持不转"
+        } else {
+            let direction = cycle.freq > 0 ? "逆时针" : "顺时针"
+            motion = "k = \(cycle.freq) · 每周\(direction)转 \(abs(cycle.freq)) 圈"
+        }
+        guard isStaticPhase else { return motion }
+        return "\(motion) · 静态相位 \(decimal(cycle.phase / Double.pi))π"
+    }
+
+    private func decimal(_ value: Double) -> String {
+        let rounded = (value * 10).rounded() / 10
+        return rounded == rounded.rounded()
+            ? String(Int(rounded))
+            : String(rounded)
     }
 }
 
